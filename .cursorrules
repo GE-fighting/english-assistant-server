@@ -1,0 +1,38 @@
+# .cursorrules file for Rust Actix Web Backend using SQLx and Postgres
+language: rust
+project_structure:
+  - src
+    - main.rs                  # Entry point for the application
+    - config.rs                # Configuration management
+    - handlers                 # Route handlers
+      - mod.rs                 # Re-exports for module contents
+      - user_handler.rs        # Example: user handler
+    - models                   # Database models
+      - mod.rs                 # Re-exports for module contents
+      - user.rs                # Example: user model
+    - services                 # Business logic and DB interaction
+      - mod.rs                 # Re-exports for module contents
+      - user_service.rs        # Example: user service
+    - utils                    # Utility functions
+      - mod.rs                 # Re-exports for module contents
+    - routes.rs                # Route definitions
+    - db.rs                    # Database connection setup with SQLx
+  - migrations                 # Folder for SQLx database migrations
+    - V1__initial_setup.sql    # Example initial setup migration
+  - Cargo.toml                # Cargo dependencies
+
+dependencies:
+  - actix-web
+  - sqlx
+  - tokio
+  - serde
+  - serde_json
+  - dotenv
+
+development_guidelines:
+  - Use Serde for JSON serialization/deserialization
+  - Manage environment configurations with dotenv
+  - Set up proper logging with the log crate
+  - Use SQLx for async database interactions
+  - Maintain modular separation of concerns (handlers, models, services)
+  - Ensure distinct and descriptive naming conventions for files and directories
