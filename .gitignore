@@ -1,2 +1,7 @@
 /target
 /config/local.yaml
+.env
+.sqlx
+.idea
+/.sqlx/
+Cargo.lock
