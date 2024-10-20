@@ -1,3 +1,1 @@
-mod user_service;
-
-pub use user_service::*;
+pub mod word_service;

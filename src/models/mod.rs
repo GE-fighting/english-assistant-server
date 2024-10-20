@@ -1,3 +1,5 @@
-mod user;
+pub mod response;
+pub mod word;
 
-pub use user::*;
+pub use response::*;
+pub use word::*;
