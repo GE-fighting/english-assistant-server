@@ -1,9 +1,9 @@
 use crate::models::word::Word;
 use crate::models::ApiResponse;
+use crate::models::TextbookVersion;
 use reqwest::Client;
 use serde_json::{json, Value};
 use sqlx::PgPool;
-use std::fmt::format;
 
 pub async fn create_word(pool: &PgPool, word: &str) -> ApiResponse<Word> {
     let word_in_db = get_word(pool, word).await;
@@ -164,3 +164,5 @@ pub async fn update_batch_words(pool: &PgPool) -> ApiResponse<()> {
     }
     ApiResponse::success(())
 }
+
+
