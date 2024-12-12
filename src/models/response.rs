@@ -23,4 +23,20 @@ impl<T> ApiResponse<T> {
             data: None,
         }
     }
+
+    pub fn not_found(message: String) -> Self {
+        Self {
+            code: 404,
+            message,
+            data: None,
+        }
+    }
+
+    pub fn error_default_code(message: String) -> Self {
+        Self {
+            code: 500,
+            message,
+            data: None,
+        }
+    }
 }

@@ -1,11 +1,9 @@
-use sqlx::PgPool;
-use crate::models::ApiResponse;
 use crate::models::grade::Grade;
+use crate::models::response::ApiResponse;
+use sqlx::PgPool;
 
-pub async fn get_grades(pool: &PgPool) ->ApiResponse<Vec<Grade>>{
-    match sqlx::query_as!(
-       Grade,"SELECT *  FROM grades"
-   )
+pub async fn get_grades(pool: &PgPool) -> ApiResponse<Vec<Grade>> {
+    match sqlx::query_as!(Grade, "SELECT *  FROM grades")
         .fetch_all(pool)
         .await
     {

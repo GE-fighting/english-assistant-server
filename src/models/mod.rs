@@ -1,8 +1,7 @@
-pub mod response;
-pub mod word;
-pub mod TextbookVersion;
+pub mod dto;
+pub mod entity;
 pub mod grade;
-
-pub use response::*;
-pub use word::*;
-pub use TextbookVersion::*;
+pub mod response;
+pub mod semester;
+pub mod textbook;
+pub mod word;

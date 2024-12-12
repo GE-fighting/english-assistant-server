@@ -17,5 +17,3 @@ pub async fn update_batch_words(pool: web::Data<PgPool>) -> impl Responder {
     let result = word_service::update_batch_words(&pool).await;
     HttpResponse::Created().json(result)
 }
-
-
