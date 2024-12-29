@@ -1,5 +1,6 @@
 use actix_cors::Cors;
 use actix_web::http::header;
+use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 mod config;
 mod db;
@@ -16,7 +17,7 @@ async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "debug,actix_web=info,sqlx=warn");
 
     // 初始化日志
-    env_logger::init();
+    utils::logger::init_logger().expect("Failed to initialize logger");
 
     // 记录启动日志
     log::info!("应用正在启动");
@@ -41,11 +42,11 @@ async fn main() -> std::io::Result<()> {
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
             .allowed_header(header::CONTENT_TYPE)
-            .max_age(3600)
-            .supports_credentials();
+            .max_age(3600);
 
         App::new()
             .wrap(cors)
+            .wrap(Logger::default())
             .app_data(web::Data::new(pool.clone()))
             .configure(routes::config)
     })

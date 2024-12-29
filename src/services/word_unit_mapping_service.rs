@@ -32,21 +32,25 @@ pub async fn create_word_unit_mapping(
     let word_record = word_repository::find_by_word(pool, &word).await.unwrap();
     let word_entity = match word_record {
         Some(mut record) => {
-            //更新单词
-            let word_info = fetch_word_info(&*word).await.unwrap();
+            if record.meaning.is_some() {
+                record
+            } else {
+                //更新单词
+                let word_info = fetch_word_info(&*word).await.unwrap();
 
-            record.meaning = Some(serde_json::to_string(&word_info.meanings).unwrap());
-            record.phonetic_us = Some(format!("/{}/", word_info.us_phonetic));
-            record.phonetic_uk = Some(format!("/{}/", word_info.uk_phonetic));
-            let llm_service = LLMService::new();
-            let sentences = llm_service.get_example_sentences(&word).await?;
-            let mut examples = String::new();
-            for (eng, chn) in sentences {
-                examples.push_str(&format!("{}|{}\n", eng, chn));
+                record.meaning = Some(serde_json::to_string(&word_info.meanings).unwrap());
+                record.phonetic_us = Some(format!("/{}/", word_info.us_phonetic));
+                record.phonetic_uk = Some(format!("/{}/", word_info.uk_phonetic));
+                let llm_service = LLMService::new();
+                let sentences = llm_service.get_example_sentences(&word).await?;
+                let mut examples = String::new();
+                for (eng, chn) in sentences {
+                    examples.push_str(&format!("{}|{}\n", eng, chn));
+                }
+                record.example = Some(examples);
+
+                word_repository::update(pool, &record).await.unwrap()
             }
-            record.example = Some(examples);
-
-            word_repository::update(pool, &record).await.unwrap()
         }
         None => {
             let mut word_entity = Word::new(&word);

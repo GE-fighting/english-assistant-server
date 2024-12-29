@@ -1,7 +1,7 @@
 use anyhow::Result;
-use chrono::Local;
+use flexi_logger::{Cleanup, Criterion, FileSpec, Logger, Naming};
+use std::env;
 use std::fs;
-use std::io::Write;
 use std::path::Path;
 use std::sync::Once;
 
@@ -10,94 +10,45 @@ static LOGGER_INIT: Once = Once::new();
 pub fn init_logger() -> Result<()> {
     // 使用 Once 确保只初始化一次
     LOGGER_INIT.call_once(|| {
+        // 读取日志目录路径配置，默认为 "logs"
+        let log_dir = env::var("LOG_DIR").unwrap_or_else(|_| "logs".to_string());
+        let log_dir_path = Path::new(&log_dir);
+
         // 确保日志目录存在
-        let log_dir = Path::new("logs");
-        fs::create_dir_all(log_dir).expect("Failed to create log directory");
+        fs::create_dir_all(log_dir_path).expect("Failed to create log directory");
 
-        // 生成按日期命名的日志文件
-        let log_filename = format!("logs/{}.log", Local::now().format("%Y-%m-%d"));
+        // 读取日志级别配置，默认为 "info"
+        let log_level = env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
-        // 配置控制台日志
-        env_logger::Builder::from_default_env()
-            .format(|buf, record| {
-                use std::io::Write;
-                writeln!(
-                    buf,
+        // 配置日志文件
+        let log_file_spec = FileSpec::default()
+            .directory(&log_dir)
+            .basename("app")
+            .suffix("log")
+            .suppress_timestamp();
+
+        // 配置日志滚动策略
+        let criterion = Criterion::Size(10 * 1024 * 1024); // 10 MB
+        let naming = Naming::Timestamps;
+        let cleanup = Cleanup::KeepLogFiles(7); // 保留最近7天的日志文件
+
+        // 初始化日志记录器
+        Logger::try_with_str(&log_level)
+            .expect("Invalid log level")
+            .log_to_file(log_file_spec)
+            .rotate(criterion, naming, cleanup)
+            .format(|writer, datetime, record| {
+                write!(
+                    writer,
                     "{} [{}] - {}",
-                    Local::now().format("%Y-%m-%d %H:%M:%S"),
+                    datetime.format("%Y-%m-%d %H:%M:%S"),
                     record.level(),
                     record.args()
                 )
             })
-            .target(env_logger::Target::Stdout)
-            .write_style(env_logger::WriteStyle::Always)
-            .parse_filters("info")
-            .try_init()
-            .unwrap_or_else(|_| eprintln!("Logger already initialized"));
-
-        // 可选：文件日志
-        if let Err(e) = file_logger(&log_filename) {
-            eprintln!("Failed to set up file logger: {}", e);
-        }
+            .start()
+            .expect("Failed to initialize logger");
     });
-
-    Ok(())
-}
-
-fn file_logger(log_path: &str) -> Result<()> {
-    use log::{LevelFilter, Metadata, Record};
-    use std::sync::Mutex;
-
-    struct FileLogger {
-        file: Mutex<fs::File>,
-    }
-
-    impl log::Log for FileLogger {
-        fn enabled(&self, metadata: &Metadata) -> bool {
-            metadata.level() <= log::Level::Info
-        }
-
-        fn log(&self, record: &Record) {
-            if self.enabled(record.metadata()) {
-                let formatted_log = format!(
-                    "{} [{}] - {}\n",
-                    Local::now().format("%Y-%m-%d %H:%M:%S"),
-                    record.level(),
-                    record.args()
-                );
-
-                let mut file = self.file.lock().unwrap();
-                file.write_all(formatted_log.as_bytes())
-                    .map_err(|e| {
-                        eprintln!("Failed to write log to file: {}", e);
-                    })
-                    .ok();
-            }
-        }
-
-        fn flush(&self) {
-            if let Ok(mut file) = self.file.lock() {
-                file.flush()
-                    .map_err(|e| {
-                        eprintln!("Failed to flush log file: {}", e);
-                    })
-                    .ok();
-            }
-        }
-    }
-
-    let file = fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .append(true)
-        .open(log_path)?;
-
-    let logger = FileLogger {
-        file: Mutex::new(file),
-    };
-
-    log::set_boxed_logger(Box::new(logger))?;
-    log::set_max_level(LevelFilter::Info);
 
     Ok(())
 }
