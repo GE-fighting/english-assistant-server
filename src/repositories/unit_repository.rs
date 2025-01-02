@@ -1,6 +1,6 @@
 use crate::models::dto::textbook_dto::TextbookDTO;
 use crate::models::dto::unit_dto::UnitDTO;
-use crate::models::entity::unit::{self, Unit};
+use crate::models::entity::unit::{Unit};
 use anyhow::{Error, Result};
 use sqlx::{query_as, PgPool};
 

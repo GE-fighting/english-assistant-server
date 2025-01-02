@@ -1,8 +1,16 @@
-pub mod external_service;
-pub mod grade_service;
-pub mod semester_service;
-pub mod textbook_service;
-pub mod textbook_version_service;
-pub mod unit_service;
-pub mod word_service;
-pub mod word_unit_mapping_service;
+pub mod core {
+    pub mod education {
+        pub mod grade;
+        pub mod semester;
+        pub mod textbook;
+        pub mod textbook_version;
+        pub mod unit;
+        pub mod word;
+        pub mod word_unit;
+    }
+}
+
+pub mod external {
+    pub mod llm;
+    pub mod third_party;
+}

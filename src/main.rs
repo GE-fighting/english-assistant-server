@@ -2,12 +2,23 @@ use actix_cors::Cors;
 use actix_web::http::header;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
+
+use crate::handlers::{
+    grade::{GradeHandler, GradeRoutes},
+    semester::{SemesterHandler, SemesterRoutes},
+    textbook::{TextbookHandler, TextbookRoutes},
+    textbook_version::{TextbookVersionHandler, TextbookVersionRoutes},
+    unit::{UnitHandler, UnitRoutes},
+    word::{WordHandler, WordRoutes},
+    word_unit::WordUnitHandler,
+};
+use crate::handlers::word_unit::WordUnitRoutes;
+
 mod config;
 mod db;
 mod handlers;
 mod models;
 mod repositories;
-mod routes;
 mod services;
 mod utils;
 
@@ -36,6 +47,15 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to create database pool");
     log::info!("数据库连接池初始化成功");
 
+    // 创建所有处理器实例
+    let grade_handler = web::Data::new(GradeHandler::new(pool.clone()));
+    let semester_handler = web::Data::new(SemesterHandler::new(pool.clone()));
+    let textbook_handler = web::Data::new(TextbookHandler::new(pool.clone()));
+    let textbook_version_handler = web::Data::new(TextbookVersionHandler::new(pool.clone()));
+    let unit_handler = web::Data::new(UnitHandler::new(pool.clone()));
+    let word_handler = web::Data::new(WordHandler::new(pool.clone()));
+    let word_unit_handler = web::Data::new(WordUnitHandler::new(pool.clone()));
+
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
@@ -48,7 +68,20 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .wrap(Logger::default())
             .app_data(web::Data::new(pool.clone()))
-            .configure(routes::config)
+            .app_data(word_unit_handler.clone())
+            .service(
+                web::scope("/api")
+                    .configure(|cfg| {
+                        // 配置所有路由
+                        GradeRoutes::configure(cfg, grade_handler.clone());
+                        SemesterRoutes::configure(cfg, semester_handler.clone());
+                        TextbookRoutes::configure(cfg, textbook_handler.clone());
+                        TextbookVersionRoutes::configure(cfg, textbook_version_handler.clone());
+                        UnitRoutes::configure(cfg, unit_handler.clone());
+                        WordRoutes::configure(cfg, word_handler.clone());
+                        WordUnitRoutes::configure(cfg, word_unit_handler.clone());
+                    })
+            )
     })
     .bind(format!("{}:{}", settings.server.host, settings.server.port))?
     .run()
