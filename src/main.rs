@@ -1,89 +1,128 @@
+use std::fmt::Write;
+use crate::api::configure_routes;
+use crate::app::{HandlerFactory, RequestLogger, ServiceContainer};
+use crate::common::utils;
+use crate::config::Settings;
+use crate::infrastructure::cache::redis;
+use crate::infrastructure::database::db;
 use actix_cors::Cors;
 use actix_web::http::header;
-use actix_web::middleware::Logger;
-use actix_web::{web, App, HttpServer};
+use actix_web::{middleware, web, App, HttpServer};
+use dotenv::dotenv;
+use sqlx::PgPool;
+use std::sync::Arc;
+use tracing::info;
+use tracing_subscriber::{fmt, EnvFilter};
+use chrono::{DateTime, Utc, TimeZone, FixedOffset, Duration};
+use chrono_tz::Asia::Shanghai;
+use tracing_appender::rolling;
+use tracing_subscriber::fmt::format::Writer;
+use tracing_subscriber::fmt::time::FormatTime;
+use crate::infrastructure::llm::init_llm_manager;
 
-use crate::handlers::{
-    grade::{GradeHandler, GradeRoutes},
-    semester::{SemesterHandler, SemesterRoutes},
-    textbook::{TextbookHandler, TextbookRoutes},
-    textbook_version::{TextbookVersionHandler, TextbookVersionRoutes},
-    unit::{UnitHandler, UnitRoutes},
-    word::{WordHandler, WordRoutes},
-    word_unit::WordUnitHandler,
-};
-use crate::handlers::word_unit::WordUnitRoutes;
-
+mod api;
+mod app;
+mod common;
 mod config;
-mod db;
-mod handlers;
-mod models;
-mod repositories;
-mod services;
-mod utils;
+mod domain;
+mod infrastructure;
+
+struct CustomTimer;
+
+impl FormatTime for CustomTimer {
+    fn format_time(&self, w: &mut Writer<'_>) -> std::fmt::Result {
+        let now = Utc::now() + Duration::hours(8);
+        write!(w, "{}", now.format("%Y-%m-%d %H:%M:%S%.3f %z"))
+    }
+}
+
+
+async fn initialize_infrastructure() -> std::io::Result<Arc<PgPool>> {
+    // Initialize environment variables
+    dotenv().ok();
+
+    // Initialize tracing subscriber
+    let file_appender = rolling::daily("logs", "app.log");
+
+    let subscriber = fmt::Subscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env()) //使用环境变量控制日志级别
+        .with_timer(CustomTimer)
+        .with_writer(file_appender)
+        .with_ansi(false)
+        .compact()  // 使用简洁的输出格式
+        // .with_target(false) // 不显示 target
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+
+    // Load settings
+    let settings = Settings::global();
+    info!(
+        "Configuration loaded successfully, server address: {}:{}",
+        settings.app.server.host,
+        settings.app.server.port
+    );
+
+    // Initialize database connection pool
+    let pool = Arc::new(
+        db::create_pool(&settings.database)
+            .await
+            .expect("Failed to create database pool"),
+    );
+    info!("Database connection pool initialized successfully");
+
+    // Initialize redis connection
+    redis::init().await.expect("Failed to connect to Redis");
+    info!("Redis connection initialized successfully");
+
+    Ok(pool)
+}
+
+fn create_cors() -> Cors {
+    Cors::default()
+        .allow_any_origin()
+        .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+        .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+        .allowed_header(header::CONTENT_TYPE)
+        .max_age(3600)
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // 设置详细的日志环境变量
-    std::env::set_var("RUST_LOG", "debug,actix_web=info,sqlx=warn");
+    // Initialize infrastructure
+    let pool = initialize_infrastructure().await?;
 
-    // 初始化日志
-    utils::logger::init_logger().expect("Failed to initialize logger");
+    // Initialize dependency injection container
+    let service_container = Arc::new(ServiceContainer::new(pool));
 
-    // 记录启动日志
-    log::info!("应用正在启动");
-    log::debug!("调试信息：正在加载配置");
-
-    let settings = config::Settings::global();
-    log::info!(
-        "配置加载成功，服务器地址: {}:{}",
-        settings.server.host,
-        settings.server.port
+    // init llm
+    init_llm_manager();
+    // Initialize handler factory
+    let handler_factory = HandlerFactory::new(
+        service_container.get_grade_service(),
+        service_container.get_semester_service(),
+        service_container.get_system_config_service(),
+        service_container.get_textbook_service(),
+        service_container.get_textbook_version_service(),
+        service_container.get_unit_service(),
+        service_container.get_word_service(),
+        service_container.get_word_unit_service(),
+        service_container.get_model_provider_service(),
     );
 
-    // 初始化数据库连接池
-    let pool = db::create_pool(&settings.database)
-        .await
-        .expect("Failed to create database pool");
-    log::info!("数据库连接池初始化成功");
+    let settings = Settings::global();
 
-    // 创建所有处理器实例
-    let grade_handler = web::Data::new(GradeHandler::new(pool.clone()));
-    let semester_handler = web::Data::new(SemesterHandler::new(pool.clone()));
-    let textbook_handler = web::Data::new(TextbookHandler::new(pool.clone()));
-    let textbook_version_handler = web::Data::new(TextbookVersionHandler::new(pool.clone()));
-    let unit_handler = web::Data::new(UnitHandler::new(pool.clone()));
-    let word_handler = web::Data::new(WordHandler::new(pool.clone()));
-    let word_unit_handler = web::Data::new(WordUnitHandler::new(pool.clone()));
-
+    // Start HTTP server
     HttpServer::new(move || {
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
-            .allowed_header(header::CONTENT_TYPE)
-            .max_age(3600);
-
         App::new()
-            .wrap(cors)
-            .wrap(Logger::default())
-            .app_data(web::Data::new(pool.clone()))
-            .app_data(word_unit_handler.clone())
-            .service(
-                web::scope("/api")
-                    .configure(|cfg| {
-                        // 配置所有路由
-                        GradeRoutes::configure(cfg, grade_handler.clone());
-                        SemesterRoutes::configure(cfg, semester_handler.clone());
-                        TextbookRoutes::configure(cfg, textbook_handler.clone());
-                        TextbookVersionRoutes::configure(cfg, textbook_version_handler.clone());
-                        UnitRoutes::configure(cfg, unit_handler.clone());
-                        WordRoutes::configure(cfg, word_handler.clone());
-                        WordUnitRoutes::configure(cfg, word_unit_handler.clone());
-                    })
-            )
+            .wrap(create_cors())
+            .wrap(middleware::Logger::default())
+            .wrap(RequestLogger)
+            .configure(|cfg| configure_routes(cfg, handler_factory.clone()))
     })
-    .bind(format!("{}:{}", settings.server.host, settings.server.port))?
+    .bind(format!(
+        "{}:{}",
+        settings.app.server.host, settings.app.server.port
+    ))?
     .run()
     .await
 }
