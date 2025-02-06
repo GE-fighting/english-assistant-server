@@ -42,7 +42,7 @@ impl TextbookService for TextbookServiceImpl {
     async fn create_textbook(&self, textbook: &mut Textbook) -> Result<Textbook> {
         let version = self
             .textbook_version_repository
-            .find_by_id(textbook.id.unwrap())
+            .find_by_id(textbook.version_id.unwrap())
             .await?
             .unwrap()
             .name;

@@ -105,7 +105,7 @@ impl TextbookRepository for TextbookRepositoryImpl {
                 INSERT INTO textbooks (version_id, grade_id, semester_id, name, 
                                      textbook_version, grade, semester)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
-                RETURNING id, name, textbook_version, grade, semester, grade_id, semester_id, created_at, updated_at
+                RETURNING *
                 "#,
             )
             .bind(textbook.version_id)
