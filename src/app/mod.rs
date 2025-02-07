@@ -13,9 +13,9 @@
 mod handler_factory;
 mod redis_factory;
 mod repository_factory;
-mod service_container;
 mod request_logger;
+mod service_container;
 
 pub use handler_factory::HandlerFactory;
-pub use service_container::ServiceContainer;
 pub use request_logger::RequestLogger;
+pub use service_container::ServiceContainer;

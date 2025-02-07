@@ -19,7 +19,6 @@ pub struct WordDTO {
     pub pronunciation_uk: Option<String>,
 }
 
-
 impl WordDTO {
     pub fn new(word: &Word, unit_word: &WordUnitMapping) -> Self {
         let format = format_description::well_known::Rfc3339;
@@ -57,8 +56,6 @@ pub struct WordPageRequestDTO {
     pub page: Option<u32>,
     pub page_size: Option<u32>,
 }
-
-
 
 impl WordPageRequestDTO {
     pub fn page(&self) -> u32 {

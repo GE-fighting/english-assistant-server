@@ -1,9 +1,9 @@
+use crate::api::dto::unit_word_dto::WordDTO;
 use crate::common::utils::response::to_api_response;
 use crate::define_routes;
 use crate::domain::services::interfaces::word_unit_service::WordUnitService;
 use actix_web::{web, HttpResponse, Responder};
 use std::sync::Arc;
-use crate::api::dto::unit_word_dto::WordDTO;
 
 pub struct WordUnitHandler {
     service: Arc<dyn WordUnitService>,

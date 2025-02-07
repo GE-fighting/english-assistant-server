@@ -5,10 +5,10 @@ use async_trait::async_trait;
 use std::sync::Arc;
 
 use crate::domain::services::interfaces::SystemConfigService;
-use anyhow::Result;
-use tracing::{event, Level};
 use crate::infrastructure::llm;
 use crate::infrastructure::third_party::ThirdPartyService;
+use anyhow::Result;
+use tracing::debug;
 
 pub struct WordServiceImpl {
     word_repository: Arc<dyn WordRepository>,
@@ -28,7 +28,6 @@ impl WordServiceImpl {
             third_party_service,
         }
     }
-
 }
 
 #[async_trait]
@@ -38,11 +37,11 @@ impl WordService for WordServiceImpl {
         let exist_word = self.word_repository.find_by_word(word).await?;
         if exist_word.is_some() {
             let word = exist_word.unwrap();
-            if word.meaning.is_some(){
+            if word.meaning.as_ref().map_or(false, |m| !m.is_empty()) {
                 return Ok(word);
             }
             self.word_repository.delete(word.word_id.unwrap()).await;
-            event!(Level::INFO, "Deleting word with ID: {}", word.word_id.unwrap());
+            debug!("Deleting word with ID: {}", word.word_id.unwrap());
         }
         //step2. 构造单词
         let mut word_entity = Word::new(word);
@@ -61,7 +60,7 @@ impl WordService for WordServiceImpl {
             word_entity.phonetic_uk = Some(format!("/{}/", word_info.uk_phonetic));
             word_entity.phonetic_us = Some(format!("/{}/", word_info.us_phonetic));
             word_entity.meaning = Some(serde_json::to_string(&word_info.meanings)?)
-        }else {
+        } else {
             let word_info = self.third_party_service.fetch_word_info(word).await;
             if word_info.is_ok() {
                 let word_info = word_info.unwrap();
@@ -123,5 +122,4 @@ impl WordService for WordServiceImpl {
         }
         Ok(())
     }
-
 }

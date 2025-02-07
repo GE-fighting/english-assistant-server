@@ -1,5 +1,6 @@
 pub mod route_macros;
 
+use crate::api::handler::model_provider_handler::ModelProviderHandler;
 use crate::api::handler::{
     grade_handler::GradeHandler, semester_handler::SemesterHandler,
     system_config_handler::SystemConfigHandler, textbook_handler::TextbookHandler,
@@ -8,8 +9,6 @@ use crate::api::handler::{
 };
 use crate::app::HandlerFactory;
 use actix_web::web;
-use crate::api::handler::model_provider_handler::ModelProviderHandler;
-use crate::domain::models::model_provider::ModelProvider;
 
 /// Configure all application routes
 pub fn configure_routes(cfg: &mut web::ServiceConfig, handler_factory: HandlerFactory) {
@@ -45,6 +44,5 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig, handler_factory: HandlerFa
             .service(web::scope("/unit-word").configure(WordUnitHandler::register))
             .service(web::scope("/system").configure(SystemConfigHandler::register))
             .service(web::scope("/model").configure(ModelProviderHandler::register)),
-
     );
 }

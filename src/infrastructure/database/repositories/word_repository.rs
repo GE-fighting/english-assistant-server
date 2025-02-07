@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use sqlx::{PgPool, Pool, Postgres};
 use std::sync::Arc;
+use tracing::debug;
 
 #[async_trait]
 pub trait WordRepository: Repository<Word, i32> + Send + Sync {
@@ -20,7 +21,6 @@ pub trait WordRepository: Repository<Word, i32> + Send + Sync {
 
     /// 查询单词数量
     async fn count(&self) -> Result<u32>;
-
 }
 pub struct WordRepositoryImpl {
     pool: Arc<PgPool>,
@@ -72,8 +72,18 @@ impl Repository<Word, i32> for WordRepositoryImpl {
     }
 
     async fn save(&self, entity: &Word) -> Result<Word> {
-        let result = if let Some(id) = entity.word_id {
-            // Update
+        // Ensure word_id is None for new entries
+        if entity.word_id.is_some() {
+            debug!(
+                "Attempting to save an entity with an existing word_id: {:?}",
+                entity.word_id
+            );
+        }
+
+        let should_insert = entity.word_id.is_none() || entity.word_id.unwrap() <= 0;
+
+        let result = if !should_insert {
+            let id = entity.word_id.unwrap();
             sqlx::query_as!(
                 Word,
                 r#"
@@ -102,31 +112,67 @@ impl Repository<Word, i32> for WordRepositoryImpl {
             .fetch_one(&*self.pool)
             .await?
         } else {
-            // Insert
-            sqlx::query_as!(
-                Word,
-                r#"
-                INSERT INTO words (
-                    word, phonetic_us, pronunciation_us, 
-                    phonetic_uk, pronunciation_uk, meaning, example
-                )
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                RETURNING word_id, word, phonetic_us, pronunciation_us, 
-                          phonetic_uk, pronunciation_uk, meaning, example,
-                          created_at, updated_at
-                "#,
-                entity.word,
-                entity.phonetic_us,
-                entity.pronunciation_us,
-                entity.phonetic_uk,
-                entity.pronunciation_uk,
-                entity.meaning,
-                entity.example
-            )
-            .fetch_one(&*self.pool)
-            .await?
-        };
+            // Check if the word already exists
+            let existing_word =
+                sqlx::query!("SELECT word_id FROM words WHERE word = $1", entity.word)
+                    .fetch_optional(&*self.pool)
+                    .await?;
 
+            match existing_word {
+                Some(existing) => {
+                    sqlx::query_as!(
+                        Word,
+                        r#"
+                        UPDATE words 
+                        SET phonetic_us = $2,
+                            pronunciation_us = $3,
+                            phonetic_uk = $4,
+                            pronunciation_uk = $5,
+                            meaning = $6,
+                            example = $7
+                        WHERE word_id = $1
+                        RETURNING word_id, word, phonetic_us, pronunciation_us, 
+                                  phonetic_uk, pronunciation_uk, meaning, example,
+                                  created_at, updated_at
+                        "#,
+                        existing.word_id,
+                        entity.phonetic_us,
+                        entity.pronunciation_us,
+                        entity.phonetic_uk,
+                        entity.pronunciation_uk,
+                        entity.meaning,
+                        entity.example,
+                    )
+                    .fetch_one(&*self.pool)
+                    .await?
+                }
+                None => {
+                    // Log the values being inserted
+                    sqlx::query_as!(
+                        Word,
+                        r#"
+                        INSERT INTO words (
+                            word, phonetic_us, pronunciation_us, 
+                            phonetic_uk, pronunciation_uk, meaning, example
+                        )
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)
+                        RETURNING word_id, word, phonetic_us, pronunciation_us, 
+                                  phonetic_uk, pronunciation_uk, meaning, example,
+                                  created_at, updated_at
+                        "#,
+                        entity.word,
+                        entity.phonetic_us,
+                        entity.pronunciation_us,
+                        entity.phonetic_uk,
+                        entity.pronunciation_uk,
+                        entity.meaning,
+                        entity.example
+                    )
+                    .fetch_one(&*self.pool)
+                    .await?
+                }
+            }
+        };
         Ok(result)
     }
 

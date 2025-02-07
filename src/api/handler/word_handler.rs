@@ -35,8 +35,6 @@ async fn update_batch_words(data: web::Data<WordHandler>) -> impl Responder {
     HttpResponse::Ok().json(response)
 }
 
-
-
 define_routes!(
     WordHandler,
     post "/create" => create_word,

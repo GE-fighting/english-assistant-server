@@ -1,13 +1,12 @@
+use crate::infrastructure::dto::PhoneticsResponse;
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
-use crate::infrastructure::dto::PhoneticsResponse;
 
 #[derive(Deserialize)]
 struct SentencePair {
     english: String,
     chinese: String,
 }
-
 
 /// Clean LLM response that might be wrapped in code blocks
 pub fn clean_json_response(content: &str) -> String {
@@ -27,13 +26,11 @@ pub fn clean_json_response(content: &str) -> String {
 
 /// Extract and validate phonetics from LLM response
 pub fn extract_phonetics(content: &str) -> Result<(String, String)> {
-
     let response: PhoneticsResponse = serde_json::from_str(content)
         .map_err(|err| anyhow!("Failed to parse JSON response: {}", err))?;
 
     let us_phonetic = response.us_ipa.trim().to_string();
     let uk_phonetic = response.uk_ipa.trim().to_string();
-
 
     // Validate phonetic format
     if us_phonetic.contains('/') || us_phonetic.contains('[') {
@@ -54,7 +51,10 @@ pub fn extract_example_sentences(content: &str) -> Result<String> {
         return Err(anyhow!("No valid sentence pairs found in the response"));
     }
     if sentences.len() != 2 {
-        return Err(anyhow!("Expected 2 sentence pairs, got {}", sentences.len()));
+        return Err(anyhow!(
+            "Expected 2 sentence pairs, got {}",
+            sentences.len()
+        ));
     }
 
     let mut examples = String::new();

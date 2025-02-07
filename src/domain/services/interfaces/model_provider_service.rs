@@ -1,5 +1,5 @@
-use async_trait::async_trait;
 use crate::domain::models::model_provider::ModelProvider;
+use async_trait::async_trait;
 
 #[async_trait]
 pub trait ModelProviderService: Send + Sync {

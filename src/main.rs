@@ -1,24 +1,24 @@
-use std::fmt::Write;
 use crate::api::configure_routes;
 use crate::app::{HandlerFactory, RequestLogger, ServiceContainer};
 use crate::common::utils;
 use crate::config::Settings;
 use crate::infrastructure::cache::redis;
 use crate::infrastructure::database::db;
+use crate::infrastructure::llm::init_llm_manager;
 use actix_cors::Cors;
 use actix_web::http::header;
 use actix_web::{middleware, web, App, HttpServer};
+use chrono::{DateTime, Duration, FixedOffset, TimeZone, Utc};
+use chrono_tz::Asia::Shanghai;
 use dotenv::dotenv;
 use sqlx::PgPool;
+use std::fmt::Write;
 use std::sync::Arc;
 use tracing::info;
-use tracing_subscriber::{fmt, EnvFilter};
-use chrono::{DateTime, Utc, TimeZone, FixedOffset, Duration};
-use chrono_tz::Asia::Shanghai;
 use tracing_appender::rolling;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::time::FormatTime;
-use crate::infrastructure::llm::init_llm_manager;
+use tracing_subscriber::{fmt, EnvFilter};
 
 mod api;
 mod app;
@@ -36,7 +36,6 @@ impl FormatTime for CustomTimer {
     }
 }
 
-
 async fn initialize_infrastructure() -> std::io::Result<Arc<PgPool>> {
     // Initialize environment variables
     dotenv().ok();
@@ -49,7 +48,7 @@ async fn initialize_infrastructure() -> std::io::Result<Arc<PgPool>> {
         .with_timer(CustomTimer)
         .with_writer(file_appender)
         .with_ansi(false)
-        .compact()  // 使用简洁的输出格式
+        .compact() // 使用简洁的输出格式
         // .with_target(false) // 不显示 target
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
@@ -58,8 +57,7 @@ async fn initialize_infrastructure() -> std::io::Result<Arc<PgPool>> {
     let settings = Settings::global();
     info!(
         "Configuration loaded successfully, server address: {}:{}",
-        settings.app.server.host,
-        settings.app.server.port
+        settings.app.server.host, settings.app.server.port
     );
 
     // Initialize database connection pool

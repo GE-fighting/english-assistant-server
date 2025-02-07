@@ -55,10 +55,6 @@ impl ThirdPartyService for HongliangServiceImpl {
             return Err(anyhow!("API returned an error: err={}", response_body.err));
         }
 
-
-
-
-
         let data = response_body
             .data
             .get(0)

@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use crate::api::dto::unit_word_dto::{WordDTO};
+use crate::api::dto::unit_word_dto::WordDTO;
 use crate::domain::models::word_unit_mapping::WordUnitMapping;
 use crate::domain::services::interfaces::word_service::WordService;
 

@@ -26,4 +26,3 @@ pub struct Paginated<T> {
     pub page: u32,
     pub page_size: u32,
 }
-

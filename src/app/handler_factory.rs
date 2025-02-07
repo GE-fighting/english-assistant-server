@@ -1,4 +1,5 @@
 use crate::api::handler::grade_handler::GradeHandler;
+use crate::api::handler::model_provider_handler::ModelProviderHandler;
 use crate::api::handler::semester_handler::SemesterHandler;
 use crate::api::handler::system_config_handler::SystemConfigHandler;
 use crate::api::handler::textbook_handler::TextbookHandler;
@@ -13,9 +14,8 @@ use crate::domain::services::interfaces::unit_service::UnitService;
 use crate::domain::services::interfaces::word_service::WordService;
 use crate::domain::services::interfaces::word_unit_service::WordUnitService;
 use crate::domain::services::interfaces::{SystemConfigService, TextbookVersionService};
-use std::sync::Arc;
-use crate::api::handler::model_provider_handler::ModelProviderHandler;
 use crate::domain::services::ModelProviderService;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct HandlerFactory {
@@ -27,7 +27,7 @@ pub struct HandlerFactory {
     unit_service: Arc<dyn UnitService>,
     word_service: Arc<dyn WordService>,
     word_unit_service: Arc<dyn WordUnitService>,
-    model_provider_service: Arc<dyn ModelProviderService>
+    model_provider_service: Arc<dyn ModelProviderService>,
 }
 
 impl HandlerFactory {
@@ -51,7 +51,7 @@ impl HandlerFactory {
             unit_service,
             word_service,
             word_unit_service,
-            model_provider_service
+            model_provider_service,
         }
     }
 

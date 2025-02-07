@@ -1,7 +1,7 @@
-use std::fmt::{Debug, Formatter};
 use crate::config::CacheKeys;
 use crate::domain::services::interfaces::SystemConfigService;
 use crate::infrastructure::cache::redis::RedisOperations;
+use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -16,7 +16,6 @@ impl SystemConfigServiceImpl {
         Self { cache }
     }
 }
-
 
 #[async_trait]
 impl SystemConfigService for SystemConfigServiceImpl {

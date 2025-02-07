@@ -8,7 +8,7 @@ mod unit_repository;
 mod word_repository;
 mod word_unit_mapping_repository;
 
-pub use base::{Repository, Paginated};
+pub use base::{Paginated, Repository};
 pub use grade_repository::{GradeRepository, GradeRepositoryImpl};
 pub use model_provider_repository::{ModelProviderRepository, ModelProviderRepositoryImpl};
 pub use semester_repository::{SemesterRepository, SemesterRepositoryImpl};
