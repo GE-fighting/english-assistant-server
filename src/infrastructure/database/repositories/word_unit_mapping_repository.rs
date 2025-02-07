@@ -141,7 +141,7 @@ impl WordUnitMappingRepository for WordUnitMappingRepositoryImpl {
             right join words w
             on wum.word_id = w.word_id
             where wum.unit_id = $1
-            order by w.word
+            order by wum.id
             "#,
             unit_id
         )
