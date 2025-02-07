@@ -36,12 +36,11 @@ impl WordService for WordServiceImpl {
         //step1. 查询单词是否已存在
         let exist_word = self.word_repository.find_by_word(word).await?;
         if exist_word.is_some() {
-            // 判断单词meaning和example是否为空
             let word = exist_word.unwrap();
             if word.meaning.is_some(){
                 return Ok(word);
             }
-            self.word_repository.delete(word.word_id.unwrap());
+            self.word_repository.delete(word.word_id.unwrap()).await;
         }
         //step2. 构造单词
         let mut word_entity = Word::new(word);
