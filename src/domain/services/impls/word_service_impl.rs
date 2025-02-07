@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use crate::domain::services::interfaces::SystemConfigService;
 use anyhow::Result;
+use tracing::{event, Level};
 use crate::infrastructure::llm;
 use crate::infrastructure::third_party::ThirdPartyService;
 
@@ -41,6 +42,7 @@ impl WordService for WordServiceImpl {
                 return Ok(word);
             }
             self.word_repository.delete(word.word_id.unwrap()).await;
+            event!(Level::INFO, "Deleting word with ID: {}", word.word_id.unwrap());
         }
         //step2. 构造单词
         let mut word_entity = Word::new(word);
